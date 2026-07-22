@@ -1,36 +1,149 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎵 幻音视界 - Audio Visualizer
 
-## Getting Started
+一个高颜值、极具治愈感的交互式 AI 音乐声谱分析与视觉治愈系统。
 
-First, run the development server:
+## ✨ 功能特性
+
+### 🎶 音频播放
+- 支持本地 MP3 文件上传和播放
+- 实时进度条控制
+- 播放/暂停、上一曲/下一曲控制
+
+### 🎤 音频捕获
+- **系统内录**：捕获电脑播放的音乐和视频声音
+- **麦克风监听**：捕获说话的声音
+- 一键切换音频源
+
+### 🎨 可视化效果
+- **Butterchurn 可视化引擎**：与 butterchurnviz.com 相同的酷炫视觉效果
+- **预设切换**：支持 100+ 种可视化预设主题
+- **自动循环**：自动切换预设，无需手动操作
+- **随机模式**：随机选择下一个预设
+
+### 🎵 节拍器
+- 实时计算音乐 BPM（每分钟节拍数）
+- 节拍点检测与计数
+- 全屏波纹效果：圆形、星形、六边形
+- 粒子爆发效果：多彩粒子向四周飞散
+
+### 📊 频谱分析器
+- 底部实时频谱柱状图
+- 渐变色显示：低频→红橙，中频→黄绿，高频→青紫
+- 发光效果和粒子飞溅
+
+### 📝 歌词同步
+- 支持 LRC 格式歌词文件导入
+- 实时歌词同步显示
+- 歌词淡入淡出动画
+
+### 🖥️ 渲染设置
+- 帧率限制：控制每秒渲染帧数
+- 画布尺寸：调节渲染分辨率
+- 网格尺寸：调节画面精细程度
+- 过渡时间：调节预设切换的平滑程度
+
+### 🎨 视觉美学
+
+幻音视界采用专业的 **Butterchurn** 可视化引擎，结合 WebGL 硬件加速渲染，为用户带来沉浸式的3D视觉体验：
+
+- **全息质感**：强烈的层次感和深度感，仿佛置身于音乐的多维空间
+- **流体动力学**：效果如液体般流动，随音乐节奏实时变化
+- **霓虹渐变配色**：紫色、青色、粉色、金色交织，营造赛博朋克与梦幻星空的融合美学
+- **粒子系统**：成千上万的粒子随音乐律动，节拍点触发粒子爆发效果
+- **波纹扩散**：圆形、星形、六边形波纹层层叠加，形成立体视觉冲击
+
+配合全屏模式和自动隐藏界面的设计，让用户专注于纯粹的视听享受。
+
+## 🚀 快速开始
+
+### 安装依赖
+
+```bash
+npm install
+```
+
+### 开发模式
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+访问 `http://localhost:3000` 即可体验。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 生产构建
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+## 🎮 使用说明
 
-To learn more about Next.js, take a look at the following resources:
+### 键盘快捷键
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| 按键 | 功能 |
+|------|------|
+| `空格` / `→` | 下一个预设 |
+| `←` / `退格` | 上一个预设 |
+| `H` | 快速切换预设（0秒过渡） |
+| `F` | 全屏切换 |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 操作指南
 
-## Deploy on Vercel
+1. **导入音乐**：点击「导入 MP3」按钮，选择本地音乐文件
+2. **导入歌词**：点击「导入歌词」按钮，选择 LRC 格式歌词文件
+3. **监听声音**：点击「监听声音」按钮，选择「系统声音」或「麦克风」
+4. **调整设置**：点击右上角「预设」按钮，打开设置面板
+5. **全屏体验**：按 F 键或点击全屏按钮进入全屏模式
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🛠️ 技术栈
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **框架**: Next.js 16 (Turbopack)
+- **语言**: TypeScript
+- **样式**: Tailwind CSS 3
+- **音频**: Web Audio API
+- **可视化**: Butterchurn
+- **图标**: Lucide React
+
+## 📁 项目结构
+
+```
+ai-music/
+├── app/
+│   └── page.tsx          # 主页面，包含所有功能
+├── types/
+│   └── butterchurn.d.ts  # TypeScript 类型声明
+├── package.json          # 依赖配置
+├── tsconfig.json         # TypeScript 配置
+└── README.md             # 项目说明
+```
+
+## 📝 歌词格式
+
+支持标准 LRC 格式：
+
+```lrc
+[00:00.00]幻音视界
+[00:05.30]作词：AI
+[00:10.60]作曲：AI
+[00:15.90]
+[00:20.00]那一双大手牵着温柔的对我讲
+[00:25.00]长大以后要去流浪
+[00:30.00]我背起行囊走向远方
+```
+
+## 📄 许可证
+
+MIT License
+
+这个项目核心就三步：
+
+1. 用浏览器的 Web Audio API 把音乐拆成不同频率
+2. 用 Butterchurn 可视化引擎把频率数据变成酷炫画面
+3. 检测到重拍时，用 Canvas 画波纹和粒子爆炸效果
+
+最关键的是 Butterchurn 这个库，它内置了100多种视觉预设，
+不用自己从零写那些复杂的图形算法，直接调用就行！
+
+音频分析那块也不难，就是 getByteFrequencyData 这个API，
+拿到的数据就是0-255的数字，数字越大说明那个频率的声音越响。
