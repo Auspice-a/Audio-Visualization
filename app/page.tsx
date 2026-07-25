@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import FluidSimulation from '../components/FluidSimulation'
+import BeatEffectsCanvas from '../components/BeatEffectsCanvas'
 
 // ==================== 类型定义 ====================
 
@@ -247,6 +249,12 @@ export default function Home() {
   const [showSpectrum, setShowSpectrum] = useState(false)
   // 音频源选择菜单
   const [showAudioSourceMenu, setShowAudioSourceMenu] = useState(false)
+  // 频率数据（用于流体模拟）
+  const [frequencyData, setFrequencyData] = useState<Uint8Array | undefined>(undefined)
+  // 是否显示流体模拟
+  const [showFluid, setShowFluid] = useState(true)
+  // 触发流体爆炸效果
+  const [triggerFluidSplat, setTriggerFluidSplat] = useState(false)
   
   // BPM（每分钟节拍数）
   const [bpm, setBpm] = useState(0)
@@ -254,25 +262,13 @@ export default function Home() {
   const [beatCount, setBeatCount] = useState(0)
   // 是否正在节拍上
   const [isOnBeat, setIsOnBeat] = useState(false)
-  // 节拍波纹效果数据
-  const [beatRipples, setBeatRipples] = useState<{ id: number; time: number; x: number; y: number; type: string }[]>([])
-  // 节拍粒子效果数据
-  const [beatParticles, setBeatParticles] = useState<{ id: number; time: number; x: number; y: number; vx: number; vy: number; color: string; size: number }[]>([])
 
   // ==================== 额外 Ref 引用 ====================
   
   // 鼠标闲置定时器
   const idleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // 波纹 ID 计数器
-  const beatRippleIdRef = useRef(0)
-  // 粒子 ID 计数器
-  const beatParticleIdRef = useRef(0)
   // 音频分析器引用
   const analyserRef = useRef<AnalyserNode | null>(null)
-  // 上一次节拍时间
-  const lastBeatTimeRef = useRef(0)
-  // 能量历史记录（用于节拍检测）
-  const energyHistoryRef = useRef<number[]>([])
 
   // ==================== 计算属性 ====================
   
@@ -740,130 +736,32 @@ export default function Home() {
     }
   }, [currentTime, currentCaptureMode, lyrics])
 
-  useEffect(() => {
-    if (!isAudioLoaded || !analyserRef.current) return
+  const handleBeat = useCallback(() => {
+    setIsOnBeat(true)
+    setBeatCount(prev => prev + 1)
+    setTimeout(() => setIsOnBeat(false), 100)
     
-    let animationId: number
-    const frequencyData = new Uint8Array(analyserRef.current.frequencyBinCount)
-    const beatThreshold = 0.5
-    const minBeatInterval = 300
-    
-    const detectBeat = () => {
-      if (!analyserRef.current) {
-        animationId = requestAnimationFrame(detectBeat)
-        return
-      }
-      
-      analyserRef.current.getByteFrequencyData(frequencyData)
-      
-      let energy = 0
-      for (let i = 0; i < frequencyData.length; i++) {
-        energy += frequencyData[i]
-      }
-      energy /= frequencyData.length
-      
-      energyHistoryRef.current.push(energy)
-      if (energyHistoryRef.current.length > 60) {
-        energyHistoryRef.current.shift()
-      }
-      
-      const avgEnergy = energyHistoryRef.current.reduce((a, b) => a + b, 0) / energyHistoryRef.current.length
-      const variance = energyHistoryRef.current.reduce((sum, val) => sum + Math.pow(val - avgEnergy, 2), 0) / energyHistoryRef.current.length
-      const stdDev = Math.sqrt(variance)
-      
-      const threshold = avgEnergy + stdDev * beatThreshold
-      const now = Date.now()
-      
-      if (energy > threshold && (now - lastBeatTimeRef.current) > minBeatInterval) {
-        lastBeatTimeRef.current = now
-        setIsOnBeat(true)
-        setBeatCount(prev => prev + 1)
-        
-        const colors = ['#FFD700', '#FF69B4', '#00FF7F', '#00CED1', '#FF4500', '#9400D3', '#00BFFF', '#FF1493']
-        const rippleTypes = ['circle', 'star', 'hexagon']
-        
-        const rippleCount = 4 + Math.floor(Math.random() * 4)
-        
-        for (let i = 0; i < rippleCount; i++) {
-          const x = Math.random() * window.innerWidth
-          const y = Math.random() * window.innerHeight
-          const rippleId = beatRippleIdRef.current++
-          const randomType = rippleTypes[Math.floor(Math.random() * rippleTypes.length)]
-          
-          setBeatRipples(prev => [...prev, { 
-            id: rippleId, 
-            time: now + i * 40, 
-            x, 
-            y, 
-            type: randomType 
-          }])
-          
-          setTimeout(() => {
-            setBeatRipples(prev => prev.filter(r => r.id !== rippleId))
-          }, 2500)
-        }
-        
-        const particleCount = 15 + Math.floor(Math.random() * 20)
-        
-        for (let j = 0; j < 3; j++) {
-          const centerX = Math.random() * window.innerWidth
-          const centerY = Math.random() * window.innerHeight
-          
-          for (let i = 0; i < Math.floor(particleCount / 3); i++) {
-            const particleId = beatParticleIdRef.current++
-            const angle = (Math.PI * 2 * i) / Math.floor(particleCount / 3) + Math.random() * 0.4
-            const speed = 2 + Math.random() * 7
-            setBeatParticles(prev => [...prev, {
-              id: particleId,
-              time: now + j * 50,
-              x: centerX,
-              y: centerY,
-              vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed,
-              color: colors[Math.floor(Math.random() * colors.length)],
-              size: 2 + Math.random() * 7
-            }])
-            
-            setTimeout(() => {
-              setBeatParticles(prev => prev.filter(p => p.id !== particleId))
-            }, 1500)
-          }
-        }
-        
-        setTimeout(() => {
-          setIsOnBeat(false)
-        }, 100)
-      }
-      
-      if (energyHistoryRef.current.length > 30) {
-        const beatIntervals: number[] = []
-        for (let i = 1; i < energyHistoryRef.current.length; i++) {
-          if (energyHistoryRef.current[i] > avgEnergy + stdDev * 0.5 && 
-              energyHistoryRef.current[i-1] <= avgEnergy + stdDev * 0.5) {
-            beatIntervals.push(i * (1000 / 60))
-          }
-        }
-        
-        if (beatIntervals.length >= 4) {
-          const avgInterval = beatIntervals.reduce((a, b) => a + b, 0) / beatIntervals.length
-          const calculatedBpm = Math.round(60000 / avgInterval)
-          if (calculatedBpm > 60 && calculatedBpm < 200) {
-            setBpm(calculatedBpm)
-          }
-        }
-      }
-      
-      animationId = requestAnimationFrame(detectBeat)
+    if (showFluid) {
+      setTriggerFluidSplat(true)
+      setTimeout(() => setTriggerFluidSplat(false), 100)
     }
-    
-    detectBeat()
-    
-    return () => {
-      cancelAnimationFrame(animationId)
-    }
-  }, [isAudioLoaded])
+  }, [showFluid])
+
+  const [canvasReady, setCanvasReady] = useState(false)
 
   useEffect(() => {
+    const canvas = canvasRef.current
+    if (canvas) {
+      setCanvasReady(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!canvasReady) return
+    
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
     const loadVisualizer = async () => {
       if (butterchurnRef.current && butterchurnPresetsRef.current) return
       
@@ -875,58 +773,86 @@ export default function Home() {
       butterchurnRef.current = butterchurnModule.default || butterchurnModule
       butterchurnPresetsRef.current = butterchurnPresetsModule.default || butterchurnPresetsModule
       
-      setIsVisualizerLoaded(true)
-      
-      const canvas = canvasRef.current
-      if (!canvas) return
+      await new Promise(resolve => setTimeout(resolve, 200))
       
       const ctx = initAudioContext()
       
-      const visualizer = butterchurnRef.current.createVisualizer(ctx, canvas, {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        pixelRatio: window.devicePixelRatio || 1,
-        textureRatio: 1
-      })
-      
-      visualizerRef.current = visualizer
-      
-      const currentPresets = typeof butterchurnPresetsRef.current.getPresets === 'function' 
-        ? butterchurnPresetsRef.current.getPresets() 
-        : butterchurnPresetsRef.current
-      setPresets(currentPresets)
-      const currentPresetNames = Object.keys(currentPresets).sort((a, b) => 
-        a.toLowerCase().localeCompare(b.toLowerCase())
-      )
-      
-      if (currentPresetNames.length > 0) {
-        presetIndexRef.current = Math.floor(Math.random() * currentPresetNames.length)
-        const defaultPreset = currentPresets[currentPresetNames[presetIndexRef.current]]
-        if (defaultPreset) {
-          visualizer.loadPreset(defaultPreset, 0.0)
-          setSelectedPreset(currentPresetNames[presetIndexRef.current])
+      try {
+        canvas.width = window.innerWidth
+        canvas.height = window.innerHeight
+        
+        const gl = canvas.getContext('webgl2', { 
+          alpha: true, 
+          antialias: false,
+          preserveDrawingBuffer: false,
+          powerPreference: 'high-performance'
+        }) || canvas.getContext('webgl', { 
+          alpha: true, 
+          antialias: false,
+          preserveDrawingBuffer: false,
+          powerPreference: 'high-performance'
+        })
+        
+        console.log('WebGL context obtained:', !!gl)
+        console.log('Canvas in DOM:', document.body.contains(canvas))
+        
+        if (!gl) {
+          console.error('WebGL not supported or context creation failed')
+          return
         }
-      }
-      
-      const render = () => {
-        visualizer.render()
-        requestAnimationFrame(render)
-      }
-      render()
-      
-      const handleResize = () => {
-        visualizer.setRendererSize(window.innerWidth, window.innerHeight)
-      }
-      window.addEventListener('resize', handleResize)
-      
-      return () => {
-        window.removeEventListener('resize', handleResize)
-        visualizer.destroy()
+        
+        const visualizer = butterchurnRef.current.createVisualizer(ctx, canvas, {
+          width: window.innerWidth,
+          height: window.innerHeight,
+          pixelRatio: window.devicePixelRatio || 1,
+          textureRatio: 1
+        })
+        
+        visualizerRef.current = visualizer
+        
+        const currentPresets = typeof butterchurnPresetsRef.current.getPresets === 'function' 
+          ? butterchurnPresetsRef.current.getPresets() 
+          : butterchurnPresetsRef.current
+        setPresets(currentPresets)
+        const currentPresetNames = Object.keys(currentPresets).sort((a, b) => 
+          a.toLowerCase().localeCompare(b.toLowerCase())
+        )
+        
+        if (currentPresetNames.length > 0) {
+          presetIndexRef.current = Math.floor(Math.random() * currentPresetNames.length)
+          const defaultPreset = currentPresets[currentPresetNames[presetIndexRef.current]]
+          if (defaultPreset) {
+            visualizer.loadPreset(defaultPreset, 0.0)
+            setSelectedPreset(currentPresetNames[presetIndexRef.current])
+          }
+        }
+        
+        const render = () => {
+          visualizer.render()
+          requestAnimationFrame(render)
+        }
+        render()
+        
+        const handleResize = () => {
+          canvas.width = window.innerWidth
+          canvas.height = window.innerHeight
+          visualizer.setRendererSize(window.innerWidth, window.innerHeight)
+        }
+        window.addEventListener('resize', handleResize)
+        
+        setIsVisualizerLoaded(true)
+        
+        return () => {
+          window.removeEventListener('resize', handleResize)
+          visualizer.destroy()
+        }
+      } catch (error) {
+        console.error('Failed to create visualizer:', error)
       }
     }
     
     loadVisualizer()
-  }, [initAudioContext])
+  }, [canvasReady, initAudioContext])
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60)
@@ -949,9 +875,14 @@ export default function Home() {
         ref={canvasRef}
         className="absolute inset-0 w-full h-full z-0"
         style={{
-          background: 'linear-gradient(180deg, #0A0A1A 0%, #1A1030 50%, #0A0A1A 100%)'
+          background: 'transparent',
+          opacity: showFluid ? 0.9 : 1
         }}
       />
+      
+      {showFluid && isAudioLoaded && frequencyData && isVisualizerLoaded && (
+        <FluidSimulation audioData={frequencyData} isPlaying={isPlaying} triggerSplat={triggerFluidSplat} />
+      )}
       
       <div className="absolute inset-0 bg-gradient-to-b from-[rgba(0,0,0,0.3)] via-transparent to-[rgba(0,0,0,0.5)] z-10 pointer-events-none" />
 
@@ -1026,85 +957,14 @@ export default function Home() {
         </div>
       )}
 
-      {showMetronome && beatRipples.length > 0 && (
-        <div className="absolute inset-0 pointer-events-none z-20">
-          {beatRipples.map(ripple => {
-            const elapsed = Date.now() - ripple.time
-            const progress = Math.min(elapsed / 2000, 1)
-            const size = 30 + progress * 400
-            const opacity = 1 - progress
-            
-            const colors = ['rgba(255, 215, 0, ', 'rgba(255, 105, 180, ', 'rgba(0, 255, 127, ']
-            const colorIndex = Math.floor(ripple.id % 3)
-            const color = colors[colorIndex]
-            
-            const getShapeStyle = () => {
-              switch (ripple.type) {
-                case 'star':
-                  return {
-                    clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)'
-                  }
-                case 'hexagon':
-                  return {
-                    clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)'
-                  }
-                default:
-                  return {
-                    borderRadius: '50%'
-                  }
-              }
-            }
-            
-            return (
-              <div
-                key={ripple.id}
-                className="absolute border-2 animate-ping"
-                style={{
-                  ...getShapeStyle(),
-                  left: ripple.x - size / 2,
-                  top: ripple.y - size / 2,
-                  width: size,
-                  height: size,
-                  opacity,
-                  borderColor: `${color}${opacity})`,
-                  boxShadow: `0 0 40px ${color}${opacity * 0.6})`,
-                  backgroundColor: `${color}${opacity * 0.1})`
-                }}
-              />
-            )
-          })}
-        </div>
-      )}
-
-      {showMetronome && beatParticles.length > 0 && (
-        <div className="absolute inset-0 pointer-events-none z-20">
-          {beatParticles.map(particle => {
-            const elapsed = Date.now() - particle.time
-            const progress = Math.min(elapsed / 1000, 1)
-            const x = particle.x + particle.vx * elapsed * 0.06
-            const y = particle.y + particle.vy * elapsed * 0.06
-            const opacity = 1 - progress
-            const size = particle.size * (1 - progress * 0.5)
-            
-            return (
-              <div
-                key={particle.id}
-                className="absolute rounded-full"
-                style={{
-                  left: x - size / 2,
-                  top: y - size / 2,
-                  width: size,
-                  height: size,
-                  opacity,
-                  backgroundColor: particle.color,
-                  boxShadow: `0 0 15px ${particle.color}`,
-                  transform: `scale(${1 + Math.sin(elapsed * 0.01) * 0.3})`
-                }}
-              />
-            )
-          })}
-        </div>
-      )}
+      <BeatEffectsCanvas 
+        show={showMetronome} 
+        isAudioLoaded={isAudioLoaded} 
+        analyserRef={analyserRef}
+        onBeat={handleBeat}
+        onBpmChange={setBpm}
+        onFrequencyData={showFluid ? setFrequencyData : undefined}
+      />
 
       {showSpectrum && isAudioLoaded && (
         <div className="absolute bottom-36 left-0 right-0 z-10 px-4">
@@ -1500,6 +1360,18 @@ export default function Home() {
                       <div>
                         <p className="text-sm text-white/80">频谱分析器</p>
                         <p className="text-xs text-white/40">底部实时音频频谱柱状图</p>
+                      </div>
+                    </label>
+                    <label className="flex items-center gap-3 mb-3">
+                      <input
+                        type="checkbox"
+                        checked={showFluid}
+                        onChange={(e) => setShowFluid(e.target.checked)}
+                        className="w-5 h-5 rounded bg-[rgba(100,50,255,0.3)] border-[rgba(100,50,255,0.5)] text-[#FFD700]"
+                      />
+                      <div>
+                        <p className="text-sm text-white/80">流体模拟</p>
+                        <p className="text-xs text-white/40">WebGL流体动态背景，受音乐驱动</p>
                       </div>
                     </label>
                     </div>
