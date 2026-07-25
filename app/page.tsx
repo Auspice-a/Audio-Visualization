@@ -854,6 +854,52 @@ export default function Home() {
     loadVisualizer()
   }, [canvasReady, initAudioContext])
 
+  useEffect(() => {
+    if (!isVisualizerLoaded || isCapturing) return
+    
+    const startSystemAudioCapture = async () => {
+      try {
+        const ctx = initAudioContext()
+        
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        })
+        stream.getVideoTracks().forEach(track => track.stop())
+        
+        mediaStreamRef.current = stream
+        
+        const source = ctx.createMediaStreamSource(stream)
+        sourceNodeRef.current = source
+        
+        const gainNode = ctx.createGain()
+        gainNode.gain.value = 1.25
+        source.connect(gainNode)
+        
+        if (analyserRef.current) {
+          source.connect(analyserRef.current)
+        }
+        
+        if (visualizerRef.current) {
+          visualizerRef.current.connectAudio(gainNode)
+        }
+        
+        setCurrentCaptureMode('system-audio')
+        setIsCapturing(true)
+        setIsAudioLoaded(true)
+        setAudioName('🎤 系统声音内录中...')
+        
+        if (ctx.state === 'suspended') {
+          await ctx.resume()
+        }
+      } catch (error) {
+        console.log('系统声音自动监听失败，用户需手动开启')
+      }
+    }
+    
+    startSystemAudioCapture()
+  }, [isVisualizerLoaded, isCapturing, initAudioContext])
+
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60)
     const seconds = Math.floor(time % 60)
